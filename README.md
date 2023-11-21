@@ -109,6 +109,57 @@ fn rocket() -> _ {
 ```
 执行`cargo build`，`cargo run`，访问`localhost:8000`，检验一下项目。
 
+## 第四步、创建项目结构，
+整体的项目结构如下，前期为了项目入手难度低，所有的模块都在src根目录，这样比较方便简单。而且所有的mod定义也都在main.rs里，这样各个文件引用也简单。
+
+```shell
+.
+├── Cargo.toml
+├── README.md
+├── Rocket.toml         ### rocket框架配置
+├── diesel.toml         ### 数据库链接配置
+└── src
+    ├── db_conn.rs      ### 数据库链接配置
+    ├── main.rs         ### 服务启动文件
+    ├── models.rs       ### 全局model的定义
+    ├── routes.rs       ### 路由文件
+    ├── schema.rs       ### diesel生成的文件
+    └── user_lib.rs     ### service核心逻辑
+├── migrations
+│   └── 2023-11-20-123055_create_users
+│       ├── down.sql
+│       └── up.sql
+```
+## 第五步，创建数据库连接
+#### 修改`db_conn.rs`，
+```rust
+use rocket_sync_db_pools::{database, diesel};
+// 数据库连接
+#[database("mysql_db")]
+pub struct DbConn(diesel::MysqlConnection);
+```
+#### 踩个小坑
+这里有个坑，刚开始`diesel`就是无法引入进来，最后在源码里找到了答案。也就是依赖里`feature`必须要有以下三个之一，才会有`diesel`
+```rust
+#[cfg(any(
+    feature = "diesel_sqlite_pool",
+    feature = "diesel_postgres_pool",
+    feature = "diesel_mysql_pool"
+))]
+pub use diesel;
+```
+#### 然后修改main.rs，把数据库相关加进去
+```rust
+mod db_conn;
+use db_conn::DbConn;
+
+fn rocket() -> _ {
+    rocket::build()
+        .attach(DbConn::fairing())
+        .mount("/", get_routes())
+}
+```
+
 
 ## 参考文档
 1. rocket：

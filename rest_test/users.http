@@ -1,1 +1,26 @@
 GET http://localhost:9900/users/1 HTTP/1.1
+
+###
+
+POST http://localhost:9900/users/create HTTP/1.1
+Content-Type: application/json
+
+{
+    "username": "mao-0999",
+    "password_hash": "123456",
+    "email": "mao-0999@163.com"
+}
+
+###
+PUT http://localhost:9900/users/3 HTTP/1.1
+Content-Type: application/json
+
+{
+    "id": 3,
+    "username": "mao-09999",
+    "password_hash": "123456",
+    "email": "mao-0999@163.com"
+}
+
+###
+DELETE http://localhost:9900/users/3 HTTP/1.1

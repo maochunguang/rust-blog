@@ -1,0 +1,5 @@
+[global]
+port = 9900
+
+[global.databases]
+mysql_db = { url = "mysql://devbox:mypassword@localhost/my_blog" }

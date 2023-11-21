@@ -92,6 +92,22 @@ DROP TABLE blog_users;
 执行`diesel migration redo`测试down.sql是否生效。
 
 
+#### 创建main.rs，跑一下hello,world
+```rust
+// main.rs
+#[macro_use] extern crate rocket;
+
+#[get("/")]
+fn index() -> &'static str {
+    "Hello, world!"
+}
+
+#[launch]
+fn rocket() -> _ {
+    rocket::build().mount("/", routes![index])
+}
+```
+执行`cargo build`，`cargo run`，访问`localhost:8000`，检验一下项目。
 
 
 ## 参考文档

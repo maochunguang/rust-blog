@@ -1,5 +1,5 @@
 use crate::db_conn::DbConn;
-use crate::models::{BlogUser, NewBlogUser};
+use crate::models::{BlogUser, NewBlogUser, ResData};
 use crate::user_lib as lib;
 use rocket::http::Status;
 use rocket::serde::json::Json; // 引入 lib.rs 中的函数
@@ -10,10 +10,10 @@ pub fn index() -> &'static str {
 }
 
 #[post("/users/create", data = "<user>", format = "application/json")]
-pub async fn create_user(conn: DbConn, user: Json<NewBlogUser>) -> Status {
+pub async fn create_user(conn: DbConn, user: Json<NewBlogUser>) -> Json<ResData<String>> {
     match lib::create_user(&conn, user.into_inner()).await {
-        Ok(_) => Status::Created,
-        Err(_) => Status::InternalServerError,
+        Ok(_) => Json(ResData{code:0, message: String::from("ok"), data: None }),
+        Err(_) => Json(ResData{code:500, message: String::from("ok"), data: None }),
     }
 }
 
@@ -26,10 +26,10 @@ pub async fn get_user(conn: DbConn, id: i64) -> Result<Json<BlogUser>, Status> {
 }
 
 #[put("/users/<id>", data = "<user>", format = "application/json")]
-pub async fn update_user(conn: DbConn, id: i64, user: Json<BlogUser>) -> Status {
+pub async fn update_user(conn: DbConn, id: i64, user: Json<BlogUser>) -> Json<ResData<String>> {
     match lib::update_user(&conn, id, user.into_inner()).await {
-        Ok(_) => Status::Ok,
-        Err(_) => Status::NotFound,
+        Ok(_) => Json(ResData{code:0, message: String::from("ok"), data: None }),
+        Err(_) => Json(ResData{code:500, message: String::from("ok"), data: None }),
     }
 }
 

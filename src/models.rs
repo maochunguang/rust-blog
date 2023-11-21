@@ -22,3 +22,9 @@ pub struct NewBlogUser {
     pub email: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ResData<T>{
+    pub code: i32,
+    pub message: String,
+    pub data: Option<T>,
+}

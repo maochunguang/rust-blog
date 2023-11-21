@@ -350,6 +350,41 @@ GET / text/html:
    >> Response succeeded.
 ```
 
+## 第十一步，统一请求返回结构
+先定义通用的返回结构：
+```json
+{
+    "code": 200,
+    "message": "ok",
+    "data": {
+
+    }
+}
+```
+#### 修改models.rs
+先定义一个通用返回类型`ResData`
+```rust
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ResData<T>{
+    pub code: i32,
+    pub message: String,
+    pub data: Option<T>,
+}
+```
+#### 修改routes.rs
+以create_user为例子，进行返回值的修改。其他接口的返回值与其类似。
+```rust
+#[post("/users/create", data = "<user>", format = "application/json")]
+pub async fn create_user(conn: DbConn, user: Json<NewBlogUser>) -> Json<ResData<String>> {
+    match lib::create_user(&conn, user.into_inner()).await {
+        Ok(_) => Json(ResData{code:0, message: String::from("ok"), data: None }),
+        Err(_) => Json(ResData{code:500, message: String::from("ok"), data: None }),
+    }
+}
+
+```
+
+
 ## todo
 1. 单元测试
 2. 登录校验

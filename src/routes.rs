@@ -9,7 +9,7 @@ pub fn index() -> &'static str {
     "Welcome to the Blog API"
 }
 
-#[post("/users", data = "<user>")]
+#[post("/users/create", data = "<user>")]
 pub async fn create_user(conn: DbConn, user: Json<NewBlogUser>) -> Status {
     match lib::create_user(&conn, user.into_inner()).await {
         Ok(_) => Status::Created,

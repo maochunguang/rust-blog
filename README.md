@@ -9,6 +9,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ## 设置rust为nightly或者dev都行，不要stable。
 rustup default nightly
 ```
+#### 💡踩个小坑
 第一个坑在这里，如果不把rust设置为dev或者nightly后面安装diesel会报错，别问为啥报错，问就是框架就这样。
 
 
@@ -16,6 +17,7 @@ rustup default nightly
 ```shell
 cargo install diesel_cli --no-default-features --features mysql
 ```
+#### 💡踩个小坑
 如果不出意外，这里一定会报错，因为这个库底层依赖`mysqlclient`，更令人意外的是这个库是`python`的，所以你必须要在wsl2里安装好python环境，建议python版本3.10左右。
 ```
 note: ld: library not found for -lmysqlclient
@@ -138,7 +140,7 @@ use rocket_sync_db_pools::{database, diesel};
 #[database("mysql_db")]
 pub struct DbConn(diesel::MysqlConnection);
 ```
-#### 踩个小坑
+#### 💡踩个小坑
 这里有个坑，刚开始`diesel`就是无法引入进来，最后在源码里找到了答案。也就是依赖里`feature`必须要有以下三个之一，才会有`diesel`
 ```rust
 #[cfg(any(
@@ -161,10 +163,199 @@ fn rocket() -> _ {
 ```
 
 
+## 第六步，修改models文件
+这一步会把crud需要的对象创建好。
+```rust
+use serde::{Serialize, Deserialize};
+use crate::schema::blog_users;
+use diesel::prelude::*;
+
+// 对应于 blog_users 表的 Rust 结构体
+#[derive(Serialize, Deserialize, Queryable, Identifiable, AsChangeset, Clone)]
+#[diesel(table_name = blog_users)]
+pub struct BlogUser {
+    pub id: i64,
+    pub username: String,
+    pub password_hash: String,
+    pub email: Option<String>,
+    pub create_time: Option<chrono::NaiveDateTime>,
+}
+
+// 用于创建新用户的结构体，不包含 id 和 create_time 字段
+#[derive(Serialize, Deserialize, Insertable, Clone)]
+#[diesel(table_name = blog_users)]
+pub struct NewBlogUser {
+    pub username: String,
+    pub password_hash: String,
+    pub email: Option<String>,
+}
+```
+
+## 第七步，修改use_lib文件
+user_lib可以看成是service文件，crud核心逻辑都在这里。
+```rust
+use diesel::prelude::*;
+use crate::models::{BlogUser, NewBlogUser};
+use crate::db_conn::DbConn;
+
+pub async fn create_user(conn: &DbConn, new_user: NewBlogUser) -> QueryResult<usize> {
+    use crate::schema::blog_users::dsl::*;
+    let new_user_clone = new_user.clone(); // 克隆 new_user
+    conn.run(move |c| {
+        diesel::insert_into(blog_users)
+            .values(&new_user_clone) // 使用克隆
+            .execute(c)
+    }).await
+}
+
+pub async fn get_user(conn: &DbConn, user_id: i64) -> QueryResult<BlogUser> {
+    use crate::schema::blog_users::dsl::*;
+
+    conn.run(move |c| {
+        blog_users.find(user_id).first::<BlogUser>(c)
+    }).await
+}
+
+pub async fn update_user(conn: &DbConn, user_id: i64, user_data: BlogUser) -> QueryResult<usize> {
+    use crate::schema::blog_users::dsl::*;
+    let new_user_clone = user_data.clone(); // 克隆 new_user
+
+    conn.run(move |c| {
+        diesel::update(blog_users.find(user_id))
+            .set(&new_user_clone)
+            .execute(c)
+    }).await
+}
+
+pub async fn delete_user(conn: &DbConn, user_id: i64) -> QueryResult<usize> {
+    use crate::schema::blog_users::dsl::*;
+
+    conn.run(move |c| {
+        diesel::delete(blog_users.find(user_id))
+            .execute(c)
+    }).await
+}
+
+```
+#### 💡踩个小坑
+这里有个坑，就是models的对象，和schema里的对象必须完全一致。否则在查询的时候会出现类型转换错误，这里的原因是models的对象个别字段没加`Option`,如果schema里字段有`Nullable`，models的对象`Option`必须要加上。
+```
+ the trait bound `(BigInt, Text, Text, diesel::sql_types::Nullable<Text>, diesel::sql_types::Nullable<diesel::sql_types::Timestamp>): load_dsl::private::CompatibleType<BlogUser, Mysql>` is not satisfied
+    --> src/user_lib.rs:19:52
+```
+
+## 第八步，修改routes文件
+这里一次性把所有的route都创建好，统一放到routes.rs文件，然后在main.rs里引用routes，进行路由。
+```rust
+use rocket::serde::json::Json;
+use rocket::http::Status;
+use crate::db_conn::DbConn;
+use crate::models::{BlogUser, NewBlogUser};
+use crate::user_lib as lib;  // 引入 lib.rs 中的函数
+
+#[get("/")]
+pub fn index() -> &'static str {
+    "Welcome to the Blog API"
+}
+
+#[post("/users", data = "<user>")]
+pub async fn create_user(conn: DbConn, user: Json<NewBlogUser>) -> Status {
+    match lib::create_user(&conn, user.into_inner()).await {
+        Ok(_) => Status::Created,
+        Err(_) => Status::InternalServerError,
+    }
+}
+
+#[get("/users/<id>")]
+pub async fn get_user(conn: DbConn, id: i64) -> Result<Json<BlogUser>, Status> {
+    lib::get_user(&conn, id).await
+        .map(Json)
+        .map_err(|_| Status::NotFound)
+}
+
+#[put("/users/<id>", data = "<user>")]
+pub async fn update_user(conn: DbConn, id: i64, user: Json<BlogUser>) -> Status {
+    match lib::update_user(&conn, id, user.into_inner()).await {
+        Ok(_) => Status::Ok,
+        Err(_) => Status::NotFound,
+    }
+}
+
+#[delete("/users/<id>")]
+pub async fn delete_user(conn: DbConn, id: i64) -> Status {
+    match lib::delete_user(&conn, id).await {
+        Ok(_) => Status::Ok,
+        Err(_) => Status::NotFound,
+    }
+}
+
+pub fn get_routes() -> Vec<rocket::Route> {
+    routes![
+        index,
+        create_user,
+        get_user,
+        update_user,
+        delete_user
+    ]
+}
+
+```
+#### 💡踩个小坑
+`rocket`配置依赖的时候，也得设置`feature`，要不然json找不到。
+
+## 第九步，修改最终的main.rs
+```rust
+#[macro_use] extern crate rocket;
+extern crate diesel;
+mod schema;
+mod models;
+mod routes;
+mod db_conn;
+mod user_lib;
+use routes::get_routes;
+use db_conn::DbConn;
+
+
+// Rocket 启动函数
+#[launch]
+fn rocket() -> _ {
+    rocket::build()
+        .attach(DbConn::fairing())
+        .mount("/", get_routes())
+}
+
+```
+
+## 第十步，修改配置，调试代码
+修改Rocket.tom文件
+```
+[global]
+port = 9900
+
+[global.databases]
+mysql_db = { url = "mysql://devbox:mypassword@localhost/my_blog" }
+```
+
+执行`cargo build`,`cargo run`看看是否有编译错误，有的话根据报错进行修复。访问localhost:9900/
+
+#### 看看成果
+```
+GET /users/1 text/html:
+   >> Matched: (get_user) GET /users/<id>
+   >> Outcome: Success(200 OK)
+   >> Response succeeded.
+GET / text/html:
+   >> Matched: (index) GET /
+   >> Outcome: Success(200 OK)
+   >> Response succeeded.
+```
+
+
 ## 参考文档
-1. rocket：
+1. rust文档：https://doc.rust-lang.org/book/
+2. rocket文档：
     - rocket官方文档，https://rocket.rs/v0.5/guide/getting-started/#hello-world
-2. diesel：
+3. diesel文档：
     - 官方入门文档，https://diesel.rs/guides/getting-started
     - rust-doc文档，https://docs.rs/diesel/2.1.0/diesel/index.html
-3. mysqlclient：https://pypi.org/project/mysqlclient/
+4. mysqlclient：https://pypi.org/project/mysqlclient/

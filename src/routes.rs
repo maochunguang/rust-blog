@@ -5,7 +5,7 @@ use rocket::serde::json::Json; // 引入 lib.rs 中的函数
 use rocket::http::{CookieJar, Status};
 use rocket::outcome::Outcome;
 use rocket::request::{self, FromRequest, Request};
-use rocket::response::{Redirect, Responder, Response};
+use rocket::response::{Responder, Response};
 use std::io::Cursor;
 
 

@@ -303,54 +303,7 @@ pub fn get_routes() -> Vec<rocket::Route> {
 #### 💡踩个小坑
 `rocket`配置依赖的时候，也得设置`feature`，要不然json找不到。
 
-## 第九步，修改最终的main.rs
-```rust
-#[macro_use] extern crate rocket;
-extern crate diesel;
-mod schema;
-mod models;
-mod routes;
-mod db_conn;
-mod user_lib;
-use routes::get_routes;
-use db_conn::DbConn;
-
-
-// Rocket 启动函数
-#[launch]
-fn rocket() -> _ {
-    rocket::build()
-        .attach(DbConn::fairing())
-        .mount("/", get_routes())
-}
-
-```
-
-## 第十步，修改配置，调试代码
-修改Rocket.tom文件
-```
-[global]
-port = 9900
-
-[global.databases]
-mysql_db = { url = "mysql://devbox:mypassword@localhost/my_blog" }
-```
-
-执行`cargo build`,`cargo run`看看是否有编译错误，有的话根据报错进行修复。访问localhost:9900/
-
-#### 看看成果
-```
-GET /users/1 text/html:
-   >> Matched: (get_user) GET /users/<id>
-   >> Outcome: Success(200 OK)
-   >> Response succeeded.
-GET / text/html:
-   >> Matched: (index) GET /
-   >> Outcome: Success(200 OK)
-   >> Response succeeded.
-```
-
-## 第十一步，统一请求返回结构
+## 第九步，统一请求返回结构
 先定义通用的返回结构：
 ```json
 {
@@ -383,6 +336,54 @@ pub async fn create_user(conn: DbConn, user: Json<NewBlogUser>) -> Json<ResData<
 }
 
 ```
+
+## 第十步，修改最终的main.rs
+```rust
+#[macro_use] extern crate rocket;
+extern crate diesel;
+mod schema;
+mod models;
+mod routes;
+mod db_conn;
+mod user_lib;
+use routes::get_routes;
+use db_conn::DbConn;
+
+
+// Rocket 启动函数
+#[launch]
+fn rocket() -> _ {
+    rocket::build()
+        .attach(DbConn::fairing())
+        .mount("/", get_routes())
+}
+
+```
+
+#### 修改配置，调试代码
+修改Rocket.tom文件
+```
+[global]
+port = 9900
+
+[global.databases]
+mysql_db = { url = "mysql://devbox:mypassword@localhost/my_blog" }
+```
+
+执行`cargo build`,`cargo run`看看是否有编译错误，有的话根据报错进行修复。访问localhost:9900/
+
+#### 看看成果
+```
+GET /users/1 text/html:
+   >> Matched: (get_user) GET /users/<id>
+   >> Outcome: Success(200 OK)
+   >> Response succeeded.
+GET / text/html:
+   >> Matched: (index) GET /
+   >> Outcome: Success(200 OK)
+   >> Response succeeded.
+```
+
 
 
 ## todo

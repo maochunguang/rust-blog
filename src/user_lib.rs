@@ -1,5 +1,5 @@
 use diesel::prelude::*;
-use crate::models::{BlogUser, NewBlogUser};
+use crate::models::{BlogUser, NewBlogUser, LoginUser};
 use crate::db_conn::DbConn;
 
 pub async fn create_user(conn: &DbConn, new_user: NewBlogUser) -> QueryResult<usize> {
@@ -17,6 +17,16 @@ pub async fn get_user(conn: &DbConn, user_id: i64) -> QueryResult<BlogUser> {
 
     conn.run(move |c| {
         blog_users.find(user_id).first::<BlogUser>(c)
+    }).await
+}
+
+pub async fn get_login_user(conn: &DbConn, login_user: LoginUser) -> QueryResult<BlogUser> {
+    use crate::schema::blog_users::dsl::*;
+    let new_user_clone = login_user.clone(); // 克隆 new_user
+
+    conn.run(move |c| {
+        blog_users.filter(username.eq(new_user_clone.username))
+        .filter(password_hash.eq(new_user_clone.password_hash)).first::<BlogUser>(c)
     }).await
 }
 

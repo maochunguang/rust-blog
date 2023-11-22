@@ -23,6 +23,12 @@ pub struct NewBlogUser {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct LoginUser {
+    pub username: String,
+    pub password_hash: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ResData<T>{
     pub code: i32,
     pub message: String,

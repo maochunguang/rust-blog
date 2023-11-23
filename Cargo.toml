@@ -12,5 +12,6 @@ r2d2 = "0.8.10"
 r2d2_mysql = "23.0.0"
 rocket_sync_db_pools = { version = "0.1.0", features = ["diesel", "diesel_mysql_pool"] }
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 # Powerful date and time functionality
 chrono = { version = "0.4.15", features = ["serde"] }

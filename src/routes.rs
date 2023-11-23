@@ -14,7 +14,7 @@ pub fn index() -> Json<ResData<String>> {
 }
 
 #[post("/create", data = "<user>", format = "application/json")]
-pub async fn create_user(conn: DbConn, user: Json<NewBlogUser>) -> Json<ResData<String>> {
+pub async fn create_user(conn: DbConn, user: Json<NewBlogUser>, _logged_in: LoggedInGuard) -> Json<ResData<String>> {
     match lib::create_user(&conn, user.into_inner()).await {
         Ok(_) => Json(ResData {
             code: 0,
@@ -46,7 +46,7 @@ pub async fn get_user(conn: DbConn, id: i64, _logged_in: LoggedInGuard) -> Json<
 }
 
 #[put("/<id>", data = "<user>", format = "application/json")]
-pub async fn update_user(conn: DbConn, id: i64, user: Json<BlogUser>) -> Json<ResData<String>> {
+pub async fn update_user(conn: DbConn, id: i64, user: Json<BlogUser>, _logged_in: LoggedInGuard) -> Json<ResData<String>> {
     match lib::update_user(&conn, id, user.into_inner()).await {
         Ok(_) => Json(ResData {
             code: 0,
@@ -62,7 +62,7 @@ pub async fn update_user(conn: DbConn, id: i64, user: Json<BlogUser>) -> Json<Re
 }
 
 #[delete("/<id>")]
-pub async fn delete_user(conn: DbConn, id: i64) -> Json<ResData<String>> {
+pub async fn delete_user(conn: DbConn, id: i64, _logged_in: LoggedInGuard) -> Json<ResData<String>> {
     match lib::delete_user(&conn, id).await {
         Ok(_) => Json(ResData {
             code: 0,

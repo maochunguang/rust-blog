@@ -100,7 +100,32 @@ pub async fn auth_logout(cookies: &CookieJar<'_>,) -> Json<ResData<String>> {
 }
 ```
 ## 第三步，实现请求拦截和统一未登录报错
-rocket框架针对请求拦截，可以通过自定义登录守卫来实现。
+rocket框架针对请求拦截，可以通过自定义登录守卫来实现。要为所有请求添加请求守卫，有两种方法：
+1. 使用全局守卫，实现`Fairing`。
+```rust
+use rocket::{Rocket, Request, Data, fairing::{Fairing, Info, Kind}};
+
+pub struct GlobalRequestGuard;
+#[rocket::async_trait]
+impl Fairing for GlobalRequestGuard {
+    fn info(&self) -> Info {
+        Info {
+            name: "Global Request Guard",
+            kind: Kind::Request,
+        }
+    }
+
+    async fn on_request(&self, request: &mut Request<'_>, _: &mut Data<'_>) {
+        // 在这里实现全局请求处理逻辑
+    }
+}
+#[launch]
+fn rocket() -> Rocket {
+    rocket::build().attach(GlobalRequestGuard)
+}
+
+```
+2. 每个路由中显式添加守卫，实现request，例子在下面。
 #### 自定义一个登录守卫，login_lib.rs
 ```rust
 use rocket::request::Outcome;
@@ -181,7 +206,17 @@ fn rocket() -> _ {
         .register("/", catchers![not_logged_in])
 }
 ```
-#### 第四步，运行测试
+## 第四步，利用全局守卫配置
+请求守卫有个问题，就是只能一个路由一个路由的配置，非常的不人性化。作为一个有追求有理想的程序员，肯定不能手动一个个加，必须用程序的方式来解决。
+
+#### 实现全局守卫代码
+
+
+
+
+
+
+## 第五步，运行测试
 使用cargo buld和cargo run，测试以下代码。成功如下。
 ```
 GET /users/1:
@@ -191,3 +226,4 @@ GET /users/1:
    >> Responding with registered (not_logged_in) 401 catcher.
    >> Response succeeded.
 ```
+

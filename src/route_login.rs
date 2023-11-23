@@ -30,20 +30,15 @@ pub async fn auth_login(conn: DbConn, user: Json<LoginUser>, cookies: &CookieJar
     }
 }
 
-#[post("/logout", data = "<user>", format = "application/json")]
-pub async fn auth_logout(conn: DbConn, user: Json<NewBlogUser>) -> Json<ResData<String>> {
-    match lib::create_user(&conn, user.into_inner()).await {
-        Ok(_) => Json(ResData {
-            code: 0,
-            message: String::from("ok"),
-            data: None,
-        }),
-        Err(e) => Json(ResData {
-            code: 500,
-            message: e.to_string(),
-            data: None,
-        }),
-    }
+#[post("/logout", format = "application/json")]
+pub async fn auth_logout(cookies: &CookieJar<'_>,) -> Json<ResData<String>> {
+   
+    cookies.remove("user_id");
+    Json(ResData {
+        code: 0,
+        message: String::from("logout success"),
+        data: None,
+    }) 
 }
 #[post("/regiter", data = "<user>", format = "application/json")]
 pub async fn auth_regiter(conn: DbConn, user: Json<NewBlogUser>) -> Json<ResData<String>> {

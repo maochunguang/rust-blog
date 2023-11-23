@@ -41,7 +41,7 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for PleaseLogin {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'o> {
         let res_data :ResData<String> = ResData {
             code: 0,
-            message: String::from("ok"),
+            message: String::from("请先登录！"),
             data: None,
         };
         let tips =  serde_json::to_string(&res_data).unwrap();
